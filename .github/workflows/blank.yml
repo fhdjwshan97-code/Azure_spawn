@@ -1,0 +1,336 @@
+--// JOHN DOE FULL SYSTEM FINAL
+
+local Killer = script.Parent
+local Humanoid = Killer:WaitForChild("Humanoid")
+local Head = Killer:WaitForChild("Head")
+local Torso = Killer:FindFirstChild("UpperTorso") or Killer:FindFirstChild("Torso")
+local Root = Killer:WaitForChild("HumanoidRootPart")
+
+--------------------------------------------------
+-- STATS
+--------------------------------------------------
+
+Humanoid.MaxHealth = 4445
+Humanoid.Health = 4445
+Humanoid.WalkSpeed = 16
+
+local STAMINA = 100
+
+--------------------------------------------------
+-- SHOP DATA
+--------------------------------------------------
+
+local COST_COINS = 1000
+local COST_ROBUX = 400
+
+--------------------------------------------------
+-- APPEARANCE
+--------------------------------------------------
+
+-- R LOGO
+local function addRLogo()
+	if Torso then
+		local decal = Instance.new("Decal")
+		decal.Texture = "rbxassetid://R_LOGO_ID"
+		decal.Face = Enum.NormalId.Front
+		decal.Parent = Torso
+	end
+end
+
+-- LIGHT BLUE PANTS
+local function setPants()
+	for _, part in pairs(Killer:GetChildren()) do
+		if part:IsA("BasePart") and (
+			part.Name:lower():find("leg")
+		) then
+			part.Color = Color3.fromRGB(120,170,255)
+		end
+	end
+end
+
+-- FACE (CREEPY SMILE)
+local function setFace()
+	local old = Head:FindFirstChild("face")
+	if old then old:Destroy() end
+
+	local face = Instance.new("Decal")
+	face.Name = "face"
+	face.Texture = "rbxassetid://CREEPY_SMILE_ID"
+	face.Face = Enum.NormalId.Front
+	face.Parent = Head
+end
+
+-- CORRUPTED EYE GLOW
+local function addEye()
+	local light = Instance.new("PointLight")
+	light.Color = Color3.fromRGB(255,0,0)
+	light.Range = 6
+	light.Brightness = 2
+	light.Parent = Head
+end
+
+addRLogo()
+setPants()
+setFace()
+addEye()
+
+--------------------------------------------------
+-- SOUNDS
+--------------------------------------------------
+
+local function createSound(id)
+	local s = Instance.new("Sound")
+	s.SoundId = "rbxassetid://"..id
+	s.Volume = 1
+	s.Parent = Head
+	return s
+end
+
+local Sounds = {
+	Idle = createSound("IDLE_ID"),
+	Chase = createSound("CHASE_ID"),
+	Attack = createSound("ATTACK_ID"),
+	Glitch = createSound("GLITCH_ID")
+}
+
+--------------------------------------------------
+-- VOICE LINES
+--------------------------------------------------
+
+local VoiceLines = {
+	Spawn = {"The system remembers me.","You tried to erase me.","I am still here."},
+	Attack = {"Corrupt.","Break.","Error detected."},
+	Chase = {"Run.","I see everything.","The end is close."},
+	Kill = {"Deleted.","System failure."},
+	JaneKill = {"...Jane...?","It’s too late."}
+}
+
+local function playVoice(type)
+	local t = VoiceLines[type]
+	if t then
+		print("John Doe:", t[math.random(1,#t)])
+	end
+end
+
+--------------------------------------------------
+-- CORRUPTION
+--------------------------------------------------
+
+local function applyCorruption(target)
+	if not target:FindFirstChild("Corruption") then
+		local tag = Instance.new("IntValue")
+		tag.Name = "Corruption"
+		tag.Value = 1
+		tag.Parent = target
+	else
+		target.Corruption.Value = math.clamp(target.Corruption.Value + 1,1,3)
+	end
+
+	for i=1,5 do
+		if target and target:FindFirstChild("Humanoid") then
+			target.Humanoid:TakeDamage(5)
+		end
+		task.wait(1)
+	end
+end
+
+--------------------------------------------------
+-- STUN SYSTEM
+--------------------------------------------------
+
+local stunned = false
+
+local function stun(duration)
+	if stunned then return end
+	stunned = true
+	
+	Humanoid.WalkSpeed = 0
+	Sounds.Chase:Stop()
+	
+	Sounds.Glitch:Play()
+	playVoice("Spawn")
+	
+	task.wait(duration)
+	
+	stunned = false
+	Humanoid.WalkSpeed = 16
+end
+
+--------------------------------------------------
+-- ATTACK
+--------------------------------------------------
+
+local function attack(target)
+	if stunned then return end
+	
+	if target and target:FindFirstChild("Humanoid") then
+		target.Humanoid:TakeDamage(25)
+		applyCorruption(target)
+		Sounds.Attack:Play()
+		playVoice("Attack")
+	end
+end
+
+--------------------------------------------------
+-- ABILITIES
+--------------------------------------------------
+
+local function glitchSpike(target)
+	if stunned then return end
+	if target then
+		target.Humanoid:TakeDamage(60)
+	end
+end
+
+local function corruptedGrasp(target)
+	if stunned then return end
+	if target then
+		target.Humanoid:TakeDamage(20)
+		applyCorruption(target)
+		applyCorruption(target)
+	end
+end
+
+local function kingsDomain()
+	if stunned then return end
+	
+	for _,p in pairs(game.Players:GetPlayers()) do
+		local c = p.Character
+		if c and c:FindFirstChild("HumanoidRootPart") then
+			local dist = (c.HumanoidRootPart.Position - Root.Position).Magnitude
+			if dist < 20 then
+				c.Humanoid:TakeDamage(10)
+			end
+		end
+	end
+end
+
+--------------------------------------------------
+-- CHASE SYSTEM
+--------------------------------------------------
+
+local chasing = false
+
+local function startChase()
+	if not chasing then
+		chasing = true
+		Sounds.Idle:Stop()
+		Sounds.Chase:Play()
+		playVoice("Chase")
+	end
+end
+
+local function stopChase()
+	if chasing then
+		chasing = false
+		Sounds.Chase:Stop()
+		Sounds.Idle:Play()
+	end
+end
+
+--------------------------------------------------
+-- KILL SYSTEM
+--------------------------------------------------
+
+local function onKill(victim)
+	if victim.Name == "Jane Doe" then
+		playVoice("JaneKill")
+		print("SPECIAL JANE DOE KILL")
+	else
+		playVoice("Kill")
+	end
+end
+
+--------------------------------------------------
+-- RED BINARY TRAIL
+--------------------------------------------------
+
+task.spawn(function()
+	while true do
+		task.wait(0.15)
+		
+		if Humanoid.MoveDirection.Magnitude > 0 then
+			local part = Instance.new("Part")
+			part.Size = Vector3.new(0.6,0.1,0.6)
+			part.Anchored = true
+			part.CanCollide = false
+			part.Material = Enum.Material.Neon
+			part.Color = Color3.fromRGB(255,0,0)
+			part.CFrame = Root.CFrame * CFrame.new(0,-3,0)
+			part.Parent = workspace
+			
+			local gui = Instance.new("BillboardGui", part)
+			gui.Size = UDim2.new(1,0,1,0)
+			gui.AlwaysOnTop = true
+			
+			local text = Instance.new("TextLabel", gui)
+			text.Size = UDim2.new(1,0,1,0)
+			text.BackgroundTransparency = 1
+			text.Text = math.random(0,1) == 1 and "1" or "0"
+			text.TextColor3 = Color3.fromRGB(255,0,0)
+			text.TextScaled = true
+			
+			game:GetService("Debris"):AddItem(part,0.6)
+		end
+	end
+end)
+
+--------------------------------------------------
+-- START
+--------------------------------------------------
+
+playVoice("Spawn")
+Sounds.Idle:Play()
+
+--------------------------------------------------
+-- TEST KEYS
+--------------------------------------------------
+
+local UIS = game:GetService("UserInputService")
+
+UIS.InputBegan:Connect(function(input)
+	if input.KeyCode == Enum.KeyCode.Q then
+		kingsDomain()
+	elseif input.KeyCode == Enum.KeyCode.E then
+		startChase()
+	elseif input.KeyCode == Enum.KeyCode.R then
+		stopChase()
+	elseif input.KeyCode == Enum.KeyCode.T then
+		stun(3)
+	end
+end)# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      # Runs a single command using the runners shell
+      - name: Run a one-line script
+        run: echo Hello, world!
+
+      # Runs a set of commands using the runners shell
+      - name: Run a multi-line script
+        run: |
+          echo Add other actions to build,
+          echo test, and deploy your project.
